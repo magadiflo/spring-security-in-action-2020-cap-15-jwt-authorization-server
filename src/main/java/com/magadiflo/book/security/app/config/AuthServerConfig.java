@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.config.annotation.configurers.ClientD
 import org.springframework.security.oauth2.config.annotation.web.configuration.AuthorizationServerConfigurerAdapter;
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
+import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
 import org.springframework.security.oauth2.provider.token.TokenStore;
 import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
 import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
@@ -42,7 +43,14 @@ public class AuthServerConfig extends AuthorizationServerConfigurerAdapter {
                 .withClient("client")
                 .secret("secret")
                 .authorizedGrantTypes("password", "refresh_token")
-                .scopes("read");
+                .scopes("read")
+                .and()
+                /**
+                 * Agrega las credenciales del cliente utilizadas por el servidor de recursos para llamar al
+                 * endpoint, lo que expone la clave pública
+                 */
+                .withClient("resourceserver")
+                .secret("resourceserversecret");
     }
 
     @Bean
@@ -59,5 +67,14 @@ public class AuthServerConfig extends AuthorizationServerConfigurerAdapter {
     @Bean
     public TokenStore tokenStore() {
         return new JwtTokenStore(this.jwtAccessTokenConverter());
+    }
+
+    @Override
+    public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
+        /**
+         * Configura el servidor de autorización para exponer el endpoint de la clave pública
+         * para cualquier solicitud autenticada con credenciales de cliente válidas
+         */
+        security.tokenKeyAccess("isAuthenticated()");
     }
 }
